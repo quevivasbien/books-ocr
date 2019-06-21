@@ -8,6 +8,7 @@
 # Date:    July 2016
 # License: MIT License (see LICENSE.txt)
 ######################################################################
+# Modified to speed up optimization & make compatible with Python 3
 
 import os
 import sys
@@ -803,7 +804,7 @@ def remap_image(name, img, small, page_dims, params, return_array=False):
     page_xy_coords = page_xy_coords.astype(np.float32)
 
     image_points = project_xy(page_xy_coords, params)
-    
+
     image_points = norm2pix(img.shape, image_points, False).astype('f')
 
     image_x_coords = image_points[:, 0, 0].reshape(page_x_coords.shape)
