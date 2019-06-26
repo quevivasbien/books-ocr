@@ -22,11 +22,11 @@ dwp.PAGE_MARGIN_Y = 0
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\mjensen1\AppData\Local\Tesseract-OCR\tesseract.exe'
 
 
-def import_img(filename, landscape=True):
+def import_img(filename, landscape=True, ccw=True):
     img = cv2.imread(filename)
     rows, cols = img.shape[:2]
     if landscape and rows > cols:
-        return np.rot90(img, axes=(0,1))
+        return np.rot90(img, k=1 if ccw else -1, axes=(0,1))
     else:
         return img
 
@@ -55,7 +55,7 @@ def get_edges(img, lower=50, upper=100, normalize=True):
     return edged
 
 
-def find_vertical_bounds(edged_img):
+def find_vertical_bounds(edged_img, left_margin=30):
     '''Finds the left/right edges of the blocks of text on both pages in the
     image. Takes an image that has already been passed through shrink() and
     get_edges(). Should also already be normalized.
@@ -65,7 +65,7 @@ def find_vertical_bounds(edged_img):
     width = len(col_sums)
     # Find left edge of left sheet
     left_edge1 = 0
-    for i in range(width//2):
+    for i in range(left_margin, width//2):
         if np.min(col_sums[i:i+20]) > 5:
             left_edge1 = i
             break
@@ -116,8 +116,10 @@ def flatten_page(page, name):
     small = dwp.resize_to_screen(page)
     pagemask, page_outline = dwp.get_page_extents(small)
     cinfo_list = dwp.get_contours(name, small, pagemask, 'text')
-    spans = dwp.assemble_spans(name, small, pagemask, cinfo_list)
-    
+    try:
+        spans = dwp.assemble_spans(name, small, pagemask, cinfo_list)
+    except TypeError: # Span comparison failed
+        spans = []
     if len(spans) < 3:
         print('Detecting lines because only {} text spans'.format(len(spans)))
         cinfo_list = dwp.get_contours(name, small, pagemask, 'line')
@@ -142,8 +144,8 @@ def flatten_page(page, name):
     return flattened
 
 
-def process_img(filename):
-    img = import_img(filename)
+def process_img(filename, rotate_ccw=True):
+    img = import_img(filename, ccw=rotate_ccw)
     page1, page2 = get_pages(img)
     print('Flattening left page...')
     try:
@@ -166,13 +168,13 @@ def process_img(filename):
     return page1_text, page2_text
 
 
-def read_book_from_folder(folder_path, saveas=None):
+def read_book_from_folder(folder_path, saveas=None, rotate_ccw=True):
     files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) \
              if f[-4:].lower() == '.jpg']
     pages = []
     for f in files:
         print('Processing {}...'.format(f))
-        page1, page2 = process_img(f)
+        page1, page2 = process_img(f, rotate_ccw)
         pages += [page1, page2]
         if saveas is not None:
             string_out = page1 + '\n\n' + page2 + '\n\n'
@@ -185,5 +187,7 @@ def read_book_from_folder(folder_path, saveas=None):
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         read_book_from_folder(sys.argv[1], sys.argv[2])
+    elif len(sys.argv) == 4:
+        read_book_from_folder(sys.argv[1], sys.argv[2], sys.argv[3]=='ccw')
     else:
-        print('Syntax is "python ocr.py folder_path saveas"')
+        print('Syntax is "python ocr.py folder_path saveas [ccw]"')

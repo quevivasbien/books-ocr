@@ -8,7 +8,6 @@
 # Date:    July 2016
 # License: MIT License (see LICENSE.txt)
 ######################################################################
-# Modified to speed up optimization & make compatible with Python 3
 
 import os
 import sys
@@ -781,7 +780,7 @@ def remap_image(name, img, small, page_dims, params, return_array=False):
 
     def f(x):
         return np.sqrt(1+(3*(alpha + beta)*x**2-(4*alpha+2*beta)*x+alpha)**2)
-    total_len = quad(f, 0, 1)[0]
+    #total_len = quad(f, 0, 1)[0]
     height = 0.5 * page_dims[1] * OUTPUT_ZOOM * img.shape[0]
     height = round_nearest_multiple(height, REMAP_DECIMATE)
 
@@ -804,7 +803,7 @@ def remap_image(name, img, small, page_dims, params, return_array=False):
     page_xy_coords = page_xy_coords.astype(np.float32)
 
     image_points = project_xy(page_xy_coords, params)
-
+    
     image_points = norm2pix(img.shape, image_points, False).astype('f')
 
     image_x_coords = image_points[:, 0, 0].reshape(page_x_coords.shape)
